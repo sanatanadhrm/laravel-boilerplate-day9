@@ -79,7 +79,8 @@ class RegisterController extends Controller
             'email' => $data['email'],
             'password' => bcrypt($data['password']),
             'confirmation_code' => Uuid::uuid4(),
-            'confirmed' => false
+            'confirmed' => false,
+            'google2fa_secret' => $data['google2fa_secret']
         ]);
 
         if (config('auth.users.default_role')) {
@@ -99,12 +100,23 @@ class RegisterController extends Controller
     {
         $this->validator($request->all())->validate();
 
-        event(new Registered($user = $this->create($request->all())));
+        $google2fa = app('pragmarx.google2fa');
 
-        $this->guard()->login($user);
+        $registration_data=$request->all();
 
-        return $this->registered($request, $user)
-            ?: redirect($this->redirectPath());
+        $registration_data["google2fa_secret"] = $google2fa->generateSecretKey();
+
+        $request->session()->flash('registration_data', $registration_data);
+
+        event(new Registered($this->create($registration_data)));
+
+        $QR_Image = $google2fa->getQRCodeInline(
+            config('app.name'),
+            $registration_data['email'],
+            $registration_data['google2fa_secret']
+        );
+
+        return view("google2fa.register", ['QR_Image'=>$QR_Image,'secret'=>$registration_data['google2fa_secret']]);
     }
 
     /**

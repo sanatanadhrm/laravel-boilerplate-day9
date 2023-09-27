@@ -78,3 +78,8 @@ Route::group(['as' => 'protection.'], function () {
     Route::get('membership/access-denied', 'MembershipController@failed')->name('membership.failed');
     Route::get('membership/clear-cache/', 'MembershipController@clearValidationCache')->name('membership.clear_validation_cache');
 });
+
+Route::post('/2fa',function(){
+    return redirect(URL()->previous());
+})->name('2fa')->middleware('2fa');
+Route::get('tes/2fa','MembershipController@index')->name('tes.2fa')->middleware(['auth','2fa']);
